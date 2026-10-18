@@ -494,6 +494,7 @@ if candidate_results:
             f"{top_candidate['skill_match']:.1f}%",
         )
 
+    
     st.subheader("🏆 Candidate Ranking")
 
     ranking_rows = []
@@ -503,12 +504,18 @@ if candidate_results:
             {
                 "Rank": rank,
                 "Candidate": candidate["resume_name"],
-                "Skill Match (%)": round(candidate["skill_match"], 2),
+                "Skill Match (%)": round(
+                    candidate["skill_match"], 2
+                ),
                 "Text Similarity (%)": round(
                     candidate["text_similarity"], 2
                 ),
-                "Matched Skills": len(candidate["matched_skills"]),
-                "Missing Skills": len(candidate["missing_skills"]),
+                "Matched Skills": len(
+                    candidate["matched_skills"]
+                ),
+                "Missing Skills": len(
+                    candidate["missing_skills"]
+                ),
             }
         )
 
@@ -523,6 +530,49 @@ if candidate_results:
         "Similarity is shown as a separate text comparison measure."
     )
 
+    # --------------------------------------------------
+    # CANDIDATE COMPARISON CHART
+    # --------------------------------------------------
+
+    st.divider()
+    st.subheader("📈 Candidate Comparison")
+
+    import pandas as pd
+
+    chart_data = []
+
+    for candidate in candidate_results:
+        chart_data.append(
+            {
+                "Candidate": candidate["resume_name"],
+                "Skill Match (%)": round(
+                    candidate["skill_match"], 2
+                ),
+                "Text Similarity (%)": round(
+                    candidate["text_similarity"], 2
+                ),
+            }
+        )
+
+    chart_df = pd.DataFrame(chart_data)
+
+    if not chart_df.empty:
+        chart_df = chart_df.set_index("Candidate")
+
+        st.bar_chart(
+            chart_df,
+            y=["Skill Match (%)", "Text Similarity (%)"],
+            y_label="Score (%)",
+            x_label="Candidate",
+        )
+
+        st.caption(
+            "Compare candidate skill matches and text similarity. "
+            "Higher scores indicate greater measured similarity or "
+            "skill overlap, not a guaranteed hiring outcome."
+        )
+    else:
+        st.info("No candidate results are available to display.")
     # --------------------------------------------------
     # INDIVIDUAL CANDIDATE DETAILS
     # --------------------------------------------------
