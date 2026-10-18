@@ -42,49 +42,193 @@ st.set_page_config(
 # CUSTOM CSS
 # --------------------------------------------------
 
+
 st.markdown(
     """
     <style>
+    /* Main page */
     .stApp {
-        background-color: #f5f7fb;
+        background-color: #F8FAFC;
+        color: #1E293B;
     }
 
+    /* Main content */
+    [data-testid="stAppViewContainer"] {
+        background-color: #F8FAFC;
+    }
+
+    [data-testid="stHeader"] {
+        background-color: #F8FAFC;
+    }
+
+    [data-testid="stMain"] {
+        color: #1E293B;
+    }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #FFFFFF;
+        border-right: 1px solid #E2E8F0;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: #1E293B;
+    }
+
+    /* Main headings */
     .main-title {
-        font-size: 2.5rem;
+        font-size: 2.4rem;
         font-weight: 800;
-        color: #17365d;
-        margin-bottom: 0.2rem;
+        color: #172554 !important;
+        margin-bottom: 0.4rem;
     }
 
     .subtitle {
-        font-size: 1.05rem;
-        color: #536579;
+        font-size: 1rem;
+        color: #475569 !important;
         margin-bottom: 1.5rem;
+        line-height: 1.6;
     }
 
     .section-title {
-        color: #17365d;
+        color: #172554 !important;
         font-weight: 700;
     }
 
-    div[data-testid="stMetric"] {
-        background: white;
-        border: 1px solid #e2e8f0;
-        padding: 16px;
-        border-radius: 12px;
+    /* General text */
+    .stApp p,
+    .stApp label,
+    .stApp li,
+    .stApp [data-testid="stMarkdownContainer"] {
+        color: #1E293B;
     }
 
-    div.stButton > button,
-    div.stDownloadButton > button {
+    /* Input fields */
+    .stTextArea textarea,
+    .stTextInput input,
+    [data-baseweb="input"] input {
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        border: 1px solid #CBD5E1 !important;
+        border-radius: 8px !important;
+    }
+
+    .stTextArea textarea::placeholder,
+    .stTextInput input::placeholder {
+        color: #64748B !important;
+        opacity: 1;
+    }
+
+    /* File uploader */
+    [data-testid="stFileUploader"] {
+        background-color: #FFFFFF;
+        border: 1px dashed #94A3B8;
+        border-radius: 10px;
+        padding: 12px;
+    }
+
+    [data-testid="stFileUploader"] section {
+        background-color: #FFFFFF;
+    }
+
+    [data-testid="stFileUploader"] button {
+        background-color: #EEF2FF;
+        color: #3730A3;
+        border: 1px solid #C7D2FE;
+    }
+
+    /* Metric cards */
+    [data-testid="stMetric"] {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 12px;
+        padding: 18px;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+    }
+
+    [data-testid="stMetricLabel"] {
+        color: #475569 !important;
+    }
+
+    [data-testid="stMetricValue"] {
+        color: #172554 !important;
+    }
+
+    /* Buttons */
+    .stButton > button,
+    .stDownloadButton > button {
+        background-color: #4F46E5;
+        color: #FFFFFF !important;
+        border: 1px solid #4F46E5;
         border-radius: 8px;
         font-weight: 600;
+        min-height: 42px;
+    }
+
+    .stButton > button p,
+    .stDownloadButton > button p {
+        color: #FFFFFF !important;
+    }
+
+    .stButton > button:hover,
+    .stDownloadButton > button:hover {
+        background-color: #3730A3;
+        border-color: #3730A3;
+        color: #FFFFFF !important;
+    }
+
+    /* Tables */
+    [data-testid="stDataFrame"] {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 8px;
+    }
+
+    /* Expanders */
+    [data-testid="stExpander"] {
+        background-color: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        border-radius: 10px;
+    }
+
+    [data-testid="stExpander"] summary,
+    [data-testid="stExpander"] summary p {
+        color: #172554 !important;
+    }
+
+    /* Progress bars */
+    [data-testid="stProgressBar"] > div {
+        background-color: #E2E8F0;
+    }
+
+    [data-testid="stProgressBar"] > div > div {
+        background-color: #4F46E5;
+    }
+
+    /* Links */
+    .stApp a {
+        color: #4338CA !important;
+    }
+
+    /* Dividers and footer */
+    hr {
+        border-color: #E2E8F0 !important;
+    }
+
+    .stCaption,
+    [data-testid="stCaptionContainer"] {
+        color: #64748B !important;
+    }
+
+    /* Alerts */
+    [data-testid="stAlert"] {
+        border-radius: 8px;
     }
 
     </style>
     """,
     unsafe_allow_html=True,
 )
-
 
 # --------------------------------------------------
 # SIDEBAR
