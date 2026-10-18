@@ -78,7 +78,8 @@ with col1:
 
     uploaded_resume = st.file_uploader(
         "Upload Resume PDF",
-        type=["pdf"]
+        type=["pdf"],
+        help="Upload a text-based PDF resume."
     )
 
     if uploaded_resume:
@@ -117,6 +118,7 @@ analyze_button = st.button(
 
 if analyze_button:
 
+    # Validate inputs.
     if uploaded_resume is None:
         st.error("Please upload a resume PDF.")
 
@@ -153,12 +155,13 @@ if analyze_button:
                     job_skills
                 )
 
-                # Calculate scores.
+                # Calculate skill match percentage.
                 skill_match_percentage = calculate_match_percentage(
                     matched_skills,
                     job_skills
                 )
 
+                # Calculate text similarity percentage.
                 similarity_percentage = calculate_similarity(
                     resume_text,
                     job_description
@@ -180,12 +183,13 @@ if analyze_button:
 
         else:
             # =============================================
-            # RESULTS
+            # ANALYSIS RESULTS
             # =============================================
 
             st.success("Analysis completed successfully! ✅")
             st.header("📊 Analysis Results")
 
+            # Score cards and progress bars.
             score1, score2 = st.columns(2)
 
             with score1:
@@ -194,15 +198,38 @@ if analyze_button:
                     value=f"{skill_match_percentage}%"
                 )
 
+                st.progress(
+                    max(
+                        0.0,
+                        min(1.0, skill_match_percentage / 100)
+                    )
+                )
+
             with score2:
                 st.metric(
                     label="📈 Text Similarity",
                     value=f"{similarity_percentage}%"
                 )
 
+                st.progress(
+                    max(
+                        0.0,
+                        min(1.0, similarity_percentage / 100)
+                    )
+                )
+
+            st.caption(
+                "Skill Match measures detected skill overlap. "
+                "Text Similarity measures textual similarity. "
+                "Neither score guarantees job suitability."
+            )
+
             st.divider()
 
-            # Matched and missing skills.
+            # =============================================
+            # MATCHED AND MISSING SKILLS
+            # =============================================
+
             matched_col, missing_col = st.columns(2)
 
             with matched_col:
@@ -228,7 +255,10 @@ if analyze_button:
 
             st.divider()
 
-            # Recommendations.
+            # =============================================
+            # RECOMMENDATIONS
+            # =============================================
+
             st.subheader("💡 Recommendations")
 
             if recommendations:
@@ -241,7 +271,10 @@ if analyze_button:
 
             st.divider()
 
-            # Detected skills.
+            # =============================================
+            # DETECTED SKILLS
+            # =============================================
+
             skills_col1, skills_col2 = st.columns(2)
 
             with skills_col1:
@@ -258,14 +291,64 @@ if analyze_button:
                         for skill in job_skills:
                             st.write(f"• {skill}")
                     else:
-                        st.write("No job skills detected.")
+                        st.write("No skills detected.")
 
-            # Extracted text.
+            # =============================================
+            # EXTRACTED RESUME TEXT
+            # =============================================
+
             with st.expander("📃 View Extracted Resume Text"):
                 st.text(resume_text)
 
+            # =============================================
+            # DOWNLOADABLE ANALYSIS REPORT
+            # =============================================
+
+            report_lines = [
+                "AI RESUME SCREENING & JOB MATCHING REPORT",
+                "=" * 45,
+                "",
+                f"Resume: {uploaded_resume.name}",
+                f"Skill Match: {skill_match_percentage}%",
+                f"Text Similarity: {similarity_percentage}%",
+                "",
+                "MATCHED SKILLS",
+                "-" * 20,
+                *(
+                    [str(skill) for skill in matched_skills]
+                    if matched_skills
+                    else ["No matching skills detected."]
+                ),
+                "",
+                "MISSING SKILLS",
+                "-" * 20,
+                *(
+                    [str(skill) for skill in missing_skills]
+                    if missing_skills
+                    else ["No missing skills detected."]
+                ),
+                "",
+                "RECOMMENDATIONS",
+                "-" * 20,
+                *(
+                    [str(item) for item in recommendations]
+                    if recommendations
+                    else ["No specific recommendations."]
+                ),
+            ]
+
+            report_text = "\n".join(report_lines)
+
+            st.download_button(
+                label="📥 Download Analysis Report",
+                data=report_text,
+                file_name="resume_analysis_report.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+
         finally:
-            # Remove the temporary PDF after processing.
+            # Clean up the temporary PDF.
             if (
                 temporary_resume
                 and os.path.exists(temporary_resume)
