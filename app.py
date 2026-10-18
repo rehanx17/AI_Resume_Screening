@@ -1,7 +1,7 @@
 
-import os
 import io
 import csv
+import os
 import tempfile
 from datetime import datetime
 from xml.sax.saxutils import escape
@@ -46,19 +46,16 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Main page */
     .stApp,
-    [data-testid="stAppViewContainer"],
-    [data-testid="stHeader"] {
+    [data-testid="stAppViewContainer"] {
         background-color: #F8FAFC;
         color: #1E293B;
     }
 
-    [data-testid="stMain"] {
-        color: #1E293B;
+    [data-testid="stHeader"] {
+        background-color: #F8FAFC;
     }
 
-    /* Sidebar */
     [data-testid="stSidebar"] {
         background-color: #FFFFFF;
         border-right: 1px solid #E2E8F0;
@@ -68,7 +65,6 @@ st.markdown(
         color: #1E293B;
     }
 
-    /* Headings */
     .main-title {
         font-size: 2.4rem;
         font-weight: 800;
@@ -83,12 +79,6 @@ st.markdown(
         line-height: 1.6;
     }
 
-    .section-title {
-        color: #172554 !important;
-        font-weight: 700;
-    }
-
-    /* General text */
     .stApp p,
     .stApp label,
     .stApp li,
@@ -96,7 +86,6 @@ st.markdown(
         color: #1E293B;
     }
 
-    /* Text inputs */
     .stTextArea textarea,
     .stTextInput input,
     [data-baseweb="input"] input {
@@ -112,7 +101,6 @@ st.markdown(
         opacity: 1;
     }
 
-    /* PDF uploader */
     [data-testid="stFileUploader"] {
         background-color: #FFFFFF;
         border: 1px dashed #94A3B8;
@@ -130,7 +118,6 @@ st.markdown(
         border: 1px solid #C7D2FE;
     }
 
-    /* Metric cards */
     [data-testid="stMetric"] {
         background-color: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -147,7 +134,6 @@ st.markdown(
         color: #172554 !important;
     }
 
-    /* Buttons */
     .stButton > button,
     .stDownloadButton > button {
         background-color: #4F46E5;
@@ -167,17 +153,14 @@ st.markdown(
     .stDownloadButton > button:hover {
         background-color: #3730A3;
         border-color: #3730A3;
-        color: #FFFFFF !important;
     }
 
-    /* Tables */
     [data-testid="stDataFrame"] {
         background-color: #FFFFFF;
         border: 1px solid #E2E8F0;
         border-radius: 8px;
     }
 
-    /* Expanders */
     [data-testid="stExpander"] {
         background-color: #FFFFFF;
         border: 1px solid #E2E8F0;
@@ -189,19 +172,9 @@ st.markdown(
         color: #172554 !important;
     }
 
-    /* Progress bars */
-    [data-testid="stProgressBar"] > div {
-        background-color: #E2E8F0;
-    }
-
-    [data-testid="stProgressBar"] > div > div {
-        background-color: #4F46E5;
-    }
-
-    /* Extracted resume text */
     .resume-text-box {
-        background-color: #FFFFFF;
-        color: #1E293B;
+        background-color: #FFFFFF !important;
+        color: #1E293B !important;
         border: 1px solid #CBD5E1;
         border-radius: 10px;
         padding: 18px;
@@ -214,7 +187,11 @@ st.markdown(
         overflow-y: auto;
     }
 
-    /* Links and dividers */
+    .resume-text-box,
+    .resume-text-box * {
+        color: #1E293B !important;
+    }
+
     .stApp a {
         color: #4338CA !important;
     }
@@ -223,13 +200,10 @@ st.markdown(
         border-color: #E2E8F0 !important;
     }
 
-    /* Captions */
-    .stCaption,
     [data-testid="stCaptionContainer"] {
         color: #64748B !important;
     }
 
-    /* Alerts */
     [data-testid="stAlert"] {
         border-radius: 8px;
     }
@@ -251,22 +225,22 @@ def format_items(items):
     if isinstance(items, str):
         return items
 
-    return ", ".join(map(str, items))
+    return ", ".join(str(item) for item in items)
 
 
 def recommendations_to_text(recommendations):
-    """Convert recommendations into a readable string."""
+    """Convert recommendations into readable text."""
     if not recommendations:
         return "No additional recommendations."
 
     if isinstance(recommendations, str):
         return recommendations
 
-    return "; ".join(map(str, recommendations))
+    return "; ".join(str(item) for item in recommendations)
 
 
 def make_pdf_report(results, job_description):
-    """Generate a PDF report in memory and return its bytes."""
+    """Create a PDF screening report in memory."""
 
     buffer = io.BytesIO()
 
@@ -284,14 +258,12 @@ def make_pdf_report(results, job_description):
     styles = getSampleStyleSheet()
     story = []
 
-    # Report heading
     story.append(
         Paragraph(
             "AI Resume Screening Report",
             styles["Title"],
         )
     )
-
     story.append(Spacer(1, 8))
 
     story.append(
@@ -309,37 +281,27 @@ def make_pdf_report(results, job_description):
         )
     )
 
-    # Job description
     if job_description:
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 12))
         story.append(
             Paragraph("Job Description", styles["Heading2"])
         )
 
-        safe_job_description = escape(str(job_description)).replace(
+        safe_description = escape(str(job_description)).replace(
             "\n", "<br/>"
         )
 
         story.append(
-            Paragraph(
-                safe_job_description,
-                styles["BodyText"],
-            )
+            Paragraph(safe_description, styles["BodyText"])
         )
 
-    # Candidate ranking table
     story.append(Spacer(1, 18))
     story.append(
         Paragraph("Candidate Rankings", styles["Heading2"])
     )
 
     table_data = [
-        [
-            "Rank",
-            "Candidate",
-            "Skill Match",
-            "Similarity",
-        ]
+        ["Rank", "Candidate", "Skill Match", "Similarity"]
     ]
 
     for rank, candidate in enumerate(results, start=1):
@@ -405,7 +367,6 @@ def make_pdf_report(results, job_description):
     story.append(ranking_table)
     story.append(Spacer(1, 18))
 
-    # Candidate skill analysis
     story.append(
         Paragraph("Candidate Skill Analysis", styles["Heading2"])
     )
@@ -427,12 +388,11 @@ def make_pdf_report(results, job_description):
 
         story.append(
             Paragraph(
-                f'Text Similarity: {candidate["text_similarity"]:.1f}%',
+                f'Text Similarity: '
+                f'{candidate["text_similarity"]:.1f}%',
                 styles["BodyText"],
             )
         )
-
-        story.append(Spacer(1, 5))
 
         for label, key in [
             ("Resume Skills", "resume_skills"),
@@ -447,8 +407,6 @@ def make_pdf_report(results, job_description):
                     styles["BodyText"],
                 )
             )
-
-            story.append(Spacer(1, 5))
 
         safe_recommendations = escape(
             recommendations_to_text(
@@ -473,6 +431,73 @@ def make_pdf_report(results, job_description):
     return pdf_bytes
 
 
+def analyze_resume(uploaded_file, job_description, job_skills):
+    """Process one resume and return its screening results."""
+
+    temp_path = None
+
+    try:
+        with tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".pdf",
+        ) as temp_file:
+            temp_file.write(uploaded_file.getvalue())
+            temp_path = temp_file.name
+
+        resume_text = extract_text_from_pdf(temp_path)
+
+        if not resume_text or not resume_text.strip():
+            raise ValueError(
+                "No readable text was found in this PDF. "
+                "Scanned PDFs may require OCR."
+            )
+
+        resume_skills = extract_skills(resume_text)
+
+        if job_skills:
+            matched_skills, missing_skills = compare_skills(
+                resume_skills,
+                job_skills,
+            )
+
+            skill_match = calculate_match_percentage(
+                matched_skills,
+                job_skills,
+            )
+        else:
+            matched_skills = []
+            missing_skills = []
+            skill_match = 0.0
+
+        # Calculate similarity for every successfully parsed resume.
+        text_similarity = calculate_similarity(
+            resume_text,
+            job_description,
+        )
+
+        recommendations = generate_recommendations(
+            missing_skills
+        )
+
+        return {
+            "resume_name": uploaded_file.name,
+            "resume_text": resume_text,
+            "resume_skills": resume_skills,
+            "matched_skills": matched_skills,
+            "missing_skills": missing_skills,
+            "skill_match": float(skill_match),
+            "text_similarity": float(text_similarity),
+            "recommendations": recommendations,
+        }
+
+    finally:
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except OSError:
+                pass
+
+
 # ==========================================================
 # 4. SIDEBAR
 # ==========================================================
@@ -486,7 +511,6 @@ with st.sidebar:
     )
 
     st.divider()
-
     st.subheader("Features")
 
     st.markdown(
@@ -503,9 +527,8 @@ with st.sidebar:
     )
 
     st.divider()
-
     st.caption("AI Resume Screening System")
-    st.caption("Python • Streamlit • NLP • Machine Learning")
+    st.caption("Python • Streamlit • NLP • Text Similarity")
 
 
 # ==========================================================
@@ -554,7 +577,9 @@ uploaded_resumes = st.file_uploader(
 )
 
 if uploaded_resumes:
-    st.success(f"{len(uploaded_resumes)} resume(s) selected.")
+    st.success(
+        f"{len(uploaded_resumes)} resume(s) selected."
+    )
 
 
 # ==========================================================
@@ -575,7 +600,7 @@ if analyze_button:
         st.error("Please upload at least one PDF resume.")
 
     else:
-        # Clear previous results before a new screening run.
+        # Clear previous results before starting a new screening.
         st.session_state.pop("candidate_results", None)
         st.session_state.pop("screened_job_description", None)
         st.session_state.pop("failed_resumes", None)
@@ -587,13 +612,12 @@ if analyze_button:
         status_text = st.empty()
 
         try:
-            # Extract required skills once.
             job_skills = extract_skills(job_description)
 
             if not job_skills:
                 st.warning(
                     "No recognizable skills were detected in the job "
-                    "description. Skill-match results may be less informative."
+                    "description. Skill-match results will be zero."
                 )
 
             total_resumes = len(uploaded_resumes)
@@ -604,67 +628,13 @@ if analyze_button:
                     f"{uploaded_file.name}"
                 )
 
-                temp_path = None
-
                 try:
-                    # Save the uploaded PDF temporarily.
-                    with tempfile.NamedTemporaryFile(
-                        delete=False,
-                        suffix=".pdf",
-                    ) as temp_file:
-                        temp_file.write(uploaded_file.getvalue())
-                        temp_path = temp_file.name
-
-                    # Extract resume text.
-                    resume_text = extract_text_from_pdf(temp_path)
-
-                    if not resume_text or not resume_text.strip():
-                        raise ValueError(
-                            "No readable text was found in this PDF. "
-                            "It may be a scanned document."
-                        )
-
-                    # Extract candidate skills.
-                    resume_skills = extract_skills(resume_text)
-                    
-                    # Compare the resume skills with the job requirements.
-                    if job_skills:
-                        matched_skills, missing_skills = compare_skills(
-                            resume_skills,
-                            job_skills,
-                        )
-                        skill_match = calculate_match_percentage(
-                            matched_skills,
-                            job_skills,
-                        )
-                    else:
-                        matched_skills = []
-                        missing_skills = []
-                        skill_match = 0.0
-
-                        # Calculate resume-to-job text similarity.
-                        text_similarity = calculate_similarity(
-                            resume_text,
-                            job_description,
-                        )
-
-                    # Generate skill-gap recommendations.
-                    recommendations = generate_recommendations(
-                        missing_skills
+                    result = analyze_resume(
+                        uploaded_file,
+                        job_description,
+                        job_skills,
                     )
-
-                    candidate_results.append(
-                        {
-                            "resume_name": uploaded_file.name,
-                            "resume_text": resume_text,
-                            "resume_skills": resume_skills,
-                            "matched_skills": matched_skills,
-                            "missing_skills": missing_skills,
-                            "skill_match": float(skill_match),
-                            "text_similarity": float(text_similarity),
-                            "recommendations": recommendations,
-                        }
-                    )
+                    candidate_results.append(result)
 
                 except Exception as error:
                     failed_resumes.append(
@@ -674,23 +644,20 @@ if analyze_button:
                         }
                     )
 
-                finally:
-                    if temp_path and os.path.exists(temp_path):
-                        try:
-                            os.remove(temp_path)
-                        except OSError:
-                            pass
+                progress_bar.progress(
+                    (index + 1) / total_resumes
+                )
 
-                progress_bar.progress((index + 1) / total_resumes)
-
-            # Rank by skill match, highest first.
+            # Rank candidates by skill-match percentage.
             candidate_results.sort(
                 key=lambda candidate: candidate["skill_match"],
                 reverse=True,
             )
 
             if candidate_results:
-                st.session_state["candidate_results"] = candidate_results
+                st.session_state["candidate_results"] = (
+                    candidate_results
+                )
                 st.session_state["screened_job_description"] = (
                     job_description
                 )
@@ -714,7 +681,7 @@ if analyze_button:
 
             with st.expander("View resume processing errors"):
                 for failed in failed_resumes:
-                    st.write(f"**{failed['resume_name']}**")
+                    st.write(f'**{failed["resume_name"]}**')
                     st.caption(failed["error"])
 
         if not candidate_results:
@@ -728,7 +695,9 @@ if analyze_button:
 # 8. DISPLAY SCREENING RESULTS
 # ==========================================================
 
-candidate_results = st.session_state.get("candidate_results", [])
+candidate_results = st.session_state.get(
+    "candidate_results", []
+)
 
 if candidate_results:
     st.divider()
@@ -736,10 +705,13 @@ if candidate_results:
 
     total_candidates = len(candidate_results)
 
-    average_match = sum(
-        candidate["skill_match"]
-        for candidate in candidate_results
-    ) / total_candidates
+    average_match = (
+        sum(
+            candidate["skill_match"]
+            for candidate in candidate_results
+        )
+        / total_candidates
+    )
 
     top_candidate = candidate_results[0]
 
@@ -771,7 +743,9 @@ if candidate_results:
 
     ranking_rows = []
 
-    for rank, candidate in enumerate(candidate_results, start=1):
+    for rank, candidate in enumerate(
+        candidate_results, start=1
+    ):
         ranking_rows.append(
             {
                 "Rank": rank,
@@ -792,7 +766,7 @@ if candidate_results:
         )
 
     st.dataframe(
-        ranking_rows,
+        pd.DataFrame(ranking_rows),
         use_container_width=True,
         hide_index=True,
     )
@@ -812,7 +786,9 @@ if candidate_results:
     chart_data = [
         {
             "Candidate": candidate["resume_name"],
-            "Skill Match (%)": round(candidate["skill_match"], 2),
+            "Skill Match (%)": round(
+                candidate["skill_match"], 2
+            ),
             "Text Similarity (%)": round(
                 candidate["text_similarity"], 2
             ),
@@ -820,24 +796,14 @@ if candidate_results:
         for candidate in candidate_results
     ]
 
-    chart_df = pd.DataFrame(chart_data)
+    chart_df = pd.DataFrame(chart_data).set_index("Candidate")
 
-    if not chart_df.empty:
-        chart_df = chart_df.set_index("Candidate")
+    st.bar_chart(chart_df)
 
-        st.bar_chart(
-            chart_df,
-            y=["Skill Match (%)", "Text Similarity (%)"],
-            y_label="Score (%)",
-            x_label="Candidate",
-        )
-
-        st.caption(
-            "Higher scores indicate greater measured skill overlap or "
-            "text similarity, not a guaranteed hiring outcome."
-        )
-    else:
-        st.info("No candidate results are available to display.")
+    st.caption(
+        "Higher scores indicate greater measured skill overlap or "
+        "text similarity, not a guaranteed hiring outcome."
+    )
 
     # ------------------------------------------------------
     # INDIVIDUAL CANDIDATE DETAILS
@@ -845,7 +811,9 @@ if candidate_results:
 
     st.subheader("👤 Candidate Details")
 
-    for rank, candidate in enumerate(candidate_results, start=1):
+    for rank, candidate in enumerate(
+        candidate_results, start=1
+    ):
         with st.expander(
             f'#{rank} — {candidate["resume_name"]} '
             f'({candidate["skill_match"]:.1f}% skill match)'
@@ -857,11 +825,13 @@ if candidate_results:
                     "Skill Match",
                     f'{candidate["skill_match"]:.1f}%',
                 )
-
                 st.progress(
                     max(
                         0.0,
-                        min(1.0, candidate["skill_match"] / 100),
+                        min(
+                            1.0,
+                            candidate["skill_match"] / 100,
+                        ),
                     )
                 )
 
@@ -870,11 +840,13 @@ if candidate_results:
                     "Text Similarity",
                     f'{candidate["text_similarity"]:.1f}%',
                 )
-
                 st.progress(
                     max(
                         0.0,
-                        min(1.0, candidate["text_similarity"] / 100),
+                        min(
+                            1.0,
+                            candidate["text_similarity"] / 100,
+                        ),
                     )
                 )
 
@@ -914,11 +886,12 @@ if candidate_results:
             st.markdown("#### 🧠 Skills Found in Resume")
 
             if candidate["resume_skills"]:
-                st.write(format_items(candidate["resume_skills"]))
+                st.write(
+                    format_items(candidate["resume_skills"])
+                )
             else:
                 st.write("No recognized skills found.")
 
-            # Extracted text with readable contrast.
             with st.expander("📄 View extracted resume text"):
                 safe_resume_text = escape(
                     candidate.get("resume_text", "") or ""
@@ -958,7 +931,9 @@ if candidate_results:
 
     csv_writer.writeheader()
 
-    for rank, candidate in enumerate(candidate_results, start=1):
+    for rank, candidate in enumerate(
+        candidate_results, start=1
+    ):
         csv_writer.writerow(
             {
                 "Rank": rank,
@@ -1000,7 +975,9 @@ if candidate_results:
     try:
         pdf_report = make_pdf_report(
             candidate_results,
-            st.session_state.get("screened_job_description", ""),
+            st.session_state.get(
+                "screened_job_description", ""
+            ),
         )
 
         st.download_button(
