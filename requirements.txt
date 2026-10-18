@@ -1,4 +1,5 @@
-reportlab
 streamlit
 PyMuPDF
 scikit-learn
+pandas
+reportlab
