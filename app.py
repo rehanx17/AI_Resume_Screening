@@ -1,6 +1,9 @@
 
 import os
 import tempfile
+import csv
+import io
+
 import streamlit as st
 
 from utils.resume_parser import extract_text_from_pdf
@@ -86,7 +89,7 @@ st.markdown(
 )
 
 st.caption(
-    "Upload a resume, compare it with a job description, "
+    "Upload resumes, compare them with a job description, "
     "and identify relevant skills and potential skill gaps."
 )
 
@@ -121,15 +124,16 @@ with st.sidebar:
 
     st.divider()
 
-    st.subheader("How it works")
+    st.subheader("How It Works")
 
     st.markdown(
         """
-        1. Upload a PDF resume.
+        1. Upload PDF resumes.
         2. Enter a job description.
         3. Analyze skills and text.
-        4. Review the results.
-        5. Download the report.
+        4. Compare candidates.
+        5. Review skill gaps.
+        6. Download the report.
         """
     )
 
@@ -147,16 +151,23 @@ st.header("1. Enter Candidate Information")
 resume_col, job_col = st.columns(2, gap="large")
 
 with resume_col:
-    st.subheader("📄 Upload Resume")
+    st.subheader("📄 Upload Resumes")
 
-    uploaded_resume = st.file_uploader(
-        "Choose a PDF file",
+    uploaded_resumes = st.file_uploader(
+        "Choose one or more PDF resumes",
         type=["pdf"],
-        help="Upload a text-based PDF resume."
+        accept_multiple_files=True,
+        help="Upload text-based PDF resumes for comparison."
     )
 
-    if uploaded_resume is not None:
-        st.success(f"Selected: {uploaded_resume.name}")
+    if uploaded_resumes:
+        st.success(
+            f"{len(uploaded_resumes)} resume(s) selected."
+        )
+
+        with st.expander("View uploaded files"):
+            for resume in uploaded_resumes:
+                st.write(f"📄 {resume.name}")
 
 with job_col:
     st.subheader("💼 Job Description")
@@ -174,269 +185,392 @@ with job_col:
 
 st.divider()
 
+
+# =========================================================
+# ANALYZE BUTTON
+# =========================================================
+
 analyze_button = st.button(
-    "🔍 Analyze Resume",
+    "🔍 Analyze Resumes",
     type="primary",
     use_container_width=True
 )
 
 
 # =========================================================
-# ANALYSIS
+# MULTIPLE-RESUME ANALYSIS
 # =========================================================
 
 if analyze_button:
 
-    if uploaded_resume is None:
-        st.error("Please upload a resume PDF.")
+    if not uploaded_resumes:
+        st.error("Please upload at least one resume PDF.")
 
     elif not job_description.strip():
         st.error("Please enter a job description.")
 
     else:
-        temporary_resume = None
+        candidate_results = []
+        failed_resumes = []
 
+        # Extract required skills once for all candidates.
         try:
-            with st.spinner("Analyzing the resume..."):
-
-                with tempfile.NamedTemporaryFile(
-                    suffix=".pdf",
-                    delete=False
-                ) as temp_file:
-                    temp_file.write(uploaded_resume.getvalue())
-                    temporary_resume = temp_file.name
-
-                resume_text = extract_text_from_pdf(
-                    temporary_resume
-                )
-
-                resume_skills = extract_skills(resume_text)
-                job_skills = extract_skills(job_description)
-
-                matched_skills, missing_skills = compare_skills(
-                    resume_skills,
-                    job_skills
-                )
-
-                skill_match_percentage = calculate_match_percentage(
-                    matched_skills,
-                    job_skills
-                )
-
-                similarity_percentage = calculate_similarity(
-                    resume_text,
-                    job_description
-                )
-
-                recommendations = generate_recommendations(
-                    missing_skills
-                )
-
-        except ValueError as error:
-            st.error(str(error))
-
+            job_skills = extract_skills(job_description)
         except Exception:
             st.error(
-                "Unable to analyze this resume. "
-                "Please check the PDF and try again."
+                "Unable to process the job description. "
+                "Please review it and try again."
             )
+            st.stop()
 
-        else:
-            # =============================================
-            # RESULTS OVERVIEW
-            # =============================================
+        # =============================================
+        # PROCESS EACH RESUME
+        # =============================================
 
-            st.success("Resume analysis completed successfully.")
+        with st.spinner("Analyzing uploaded resumes..."):
 
-            st.header("2. Candidate Analysis Overview")
+            for uploaded_resume in uploaded_resumes:
+                temporary_resume = None
 
-            st.caption(f"Resume analyzed: {uploaded_resume.name}")
+                try:
+                    # Create a unique temporary PDF.
+                    with tempfile.NamedTemporaryFile(
+                        suffix=".pdf",
+                        delete=False
+                    ) as temp_file:
+                        temp_file.write(
+                            uploaded_resume.getvalue()
+                        )
+                        temporary_resume = temp_file.name
+
+                    # Extract resume text.
+                    resume_text = extract_text_from_pdf(
+                        temporary_resume
+                    )
+
+                    # Detect skills.
+                    resume_skills = extract_skills(
+                        resume_text
+                    )
+
+                    # Compare skills.
+                    matched_skills, missing_skills = (
+                        compare_skills(
+                            resume_skills,
+                            job_skills
+                        )
+                    )
+
+                    # Calculate scores.
+                    skill_match = calculate_match_percentage(
+                        matched_skills,
+                        job_skills
+                    )
+
+                    text_similarity = calculate_similarity(
+                        resume_text,
+                        job_description
+                    )
+
+                    # Generate recommendations.
+                    recommendations = generate_recommendations(
+                        missing_skills
+                    )
+
+                    # Save results for the dashboard.
+                    candidate_results.append({
+                        "resume_name": uploaded_resume.name,
+                        "resume_text": resume_text,
+                        "resume_skills": resume_skills,
+                        "matched_skills": matched_skills,
+                        "missing_skills": missing_skills,
+                        "skill_match": float(skill_match),
+                        "text_similarity": float(text_similarity),
+                        "recommendations": recommendations,
+                    })
+
+                except Exception as error:
+                    failed_resumes.append({
+                        "name": uploaded_resume.name,
+                        "error": str(error),
+                    })
+
+                finally:
+                    # Always attempt to clean up temporary files.
+                    if (
+                        temporary_resume
+                        and os.path.exists(temporary_resume)
+                    ):
+                        try:
+                            os.remove(temporary_resume)
+                        except OSError:
+                            pass
+
+        # =============================================
+        # RANK CANDIDATES
+        # =============================================
+
+        candidate_results.sort(
+            key=lambda candidate: candidate["skill_match"],
+            reverse=True
+        )
+
+        st.divider()
+        st.header("2. Candidate Screening Results")
+
+        st.write(
+            f"Successfully analyzed {len(candidate_results)} "
+            f"of {len(uploaded_resumes)} resume(s)."
+        )
+
+        # =============================================
+        # SUMMARY METRICS
+        # =============================================
+
+        if candidate_results:
 
             metric1, metric2, metric3 = st.columns(3)
 
             with metric1:
                 st.metric(
-                    "🎯 Skill Match",
-                    f"{skill_match_percentage}%"
+                    "📄 Resumes Analyzed",
+                    len(candidate_results)
                 )
 
             with metric2:
+                top_match = candidate_results[0]["skill_match"]
+
                 st.metric(
-                    "📈 Text Similarity",
-                    f"{similarity_percentage}%"
+                    "🏆 Highest Skill Match",
+                    f"{top_match:g}%"
                 )
 
             with metric3:
+                average_match = sum(
+                    candidate["skill_match"]
+                    for candidate in candidate_results
+                ) / len(candidate_results)
+
                 st.metric(
-                    "✅ Skills Matched",
-                    len(matched_skills)
+                    "📈 Average Skill Match",
+                    f"{average_match:.1f}%"
                 )
 
-            # Keep progress values within the supported range.
-            skill_progress = max(
-                0.0,
-                min(1.0, float(skill_match_percentage) / 100)
-            )
-
-            similarity_progress = max(
-                0.0,
-                min(1.0, float(similarity_percentage) / 100)
-            )
-
-            progress_col1, progress_col2 = st.columns(2)
-
-            with progress_col1:
-                st.write("Skill Match Progress")
-                st.progress(skill_progress)
-
-            with progress_col2:
-                st.write("Text Similarity Progress")
-                st.progress(similarity_progress)
-
-            st.info(
-                "Skill Match measures detected skill overlap. "
-                "Text Similarity measures textual similarity. "
-                "These scores do not guarantee job suitability "
-                "and should not be used as the sole basis for hiring."
+            st.caption(
+                "Candidates are ranked by detected Skill Match, "
+                "from highest to lowest. Similarity scores and "
+                "skill matches are comparison aids, not guarantees "
+                "of job suitability or substitutes for human review."
             )
 
             st.divider()
 
             # =============================================
-            # SKILL GAP ANALYSIS
+            # CANDIDATE RANKING TABLE
             # =============================================
 
-            st.header("3. Skill Gap Analysis")
+            st.subheader("🏅 Candidate Ranking")
 
-            matched_col, missing_col = st.columns(2, gap="large")
+            ranking_table = []
 
-            with matched_col:
-                st.subheader("✅ Matched Skills")
+            for rank, candidate in enumerate(
+                candidate_results,
+                start=1
+            ):
+                ranking_table.append({
+                    "Rank": rank,
+                    "Resume": candidate["resume_name"],
+                    "Skill Match (%)": candidate["skill_match"],
+                    "Text Similarity (%)": candidate["text_similarity"],
+                    "Matched Skills": len(
+                        candidate["matched_skills"]
+                    ),
+                    "Missing Skills": len(
+                        candidate["missing_skills"]
+                    ),
+                })
 
-                if matched_skills:
-                    for skill in matched_skills:
-                        st.success(str(skill))
-                else:
-                    st.info("No matching skills were detected.")
-
-            with missing_col:
-                st.subheader("📌 Missing Skills")
-
-                if missing_skills:
-                    for skill in missing_skills:
-                        st.warning(str(skill))
-                else:
-                    st.success(
-                        "All detected job skills are matched."
-                    )
+            st.dataframe(
+                ranking_table,
+                use_container_width=True,
+                hide_index=True
+            )
 
             st.divider()
 
             # =============================================
-            # RECOMMENDATIONS
+            # INDIVIDUAL CANDIDATE DETAILS
             # =============================================
 
-            st.header("4. Improvement Recommendations")
+            st.header("3. Individual Candidate Analysis")
 
-            if recommendations:
-                for recommendation in recommendations:
-                    st.info(str(recommendation))
-            else:
-                st.success(
-                    "No specific recommendations were generated."
-                )
+            for rank, candidate in enumerate(
+                candidate_results,
+                start=1
+            ):
+                with st.expander(
+                    f"#{rank} — {candidate['resume_name']} "
+                    f"({candidate['skill_match']:g}% Skill Match)"
+                ):
 
-            st.divider()
+                    score_col1, score_col2 = st.columns(2)
 
-            # =============================================
-            # DETECTED SKILLS
-            # =============================================
+                    with score_col1:
+                        st.metric(
+                            "🎯 Skill Match",
+                            f"{candidate['skill_match']:g}%"
+                        )
 
-            st.header("5. Detected Skills")
+                        st.progress(
+                            max(
+                                0.0,
+                                min(
+                                    1.0,
+                                    candidate["skill_match"] / 100
+                                )
+                            )
+                        )
 
-            resume_skills_col, job_skills_col = st.columns(2)
+                    with score_col2:
+                        st.metric(
+                            "📈 Text Similarity",
+                            f"{candidate['text_similarity']:g}%"
+                        )
 
-            with resume_skills_col:
-                with st.expander("📄 Skills found in resume"):
-                    if resume_skills:
-                        st.write(", ".join(map(str, resume_skills)))
+                        st.progress(
+                            max(
+                                0.0,
+                                min(
+                                    1.0,
+                                    candidate["text_similarity"] / 100
+                                )
+                            )
+                        )
+
+                    matched_col, missing_col = st.columns(2)
+
+                    with matched_col:
+                        st.markdown("**✅ Matched Skills**")
+
+                        if candidate["matched_skills"]:
+                            for skill in candidate["matched_skills"]:
+                                st.success(str(skill))
+                        else:
+                            st.info(
+                                "No matching skills detected."
+                            )
+
+                    with missing_col:
+                        st.markdown("**📌 Missing Skills**")
+
+                        if candidate["missing_skills"]:
+                            for skill in candidate["missing_skills"]:
+                                st.warning(str(skill))
+                        else:
+                            st.success(
+                                "No missing skills detected."
+                            )
+
+                    st.markdown("**💡 Recommendations**")
+
+                    if candidate["recommendations"]:
+                        for recommendation in candidate["recommendations"]:
+                            st.info(str(recommendation))
                     else:
-                        st.write("No skills detected.")
+                        st.write(
+                            "No specific recommendations generated."
+                        )
 
-            with job_skills_col:
-                with st.expander("💼 Skills found in job description"):
-                    if job_skills:
-                        st.write(", ".join(map(str, job_skills)))
-                    else:
-                        st.write("No skills detected.")
+                    with st.expander("📄 View Resume Skills"):
+                        if candidate["resume_skills"]:
+                            st.write(
+                                ", ".join(
+                                    map(
+                                        str,
+                                        candidate["resume_skills"]
+                                    )
+                                )
+                            )
+                        else:
+                            st.write("No skills detected.")
 
-            with st.expander("📃 View extracted resume text"):
-                st.text(resume_text)
+                    with st.expander("📃 View Extracted Resume Text"):
+                        st.text(candidate["resume_text"])
 
             st.divider()
 
             # =============================================
-            # DOWNLOAD REPORT
+            # DOWNLOAD CSV COMPARISON REPORT
             # =============================================
 
-            st.header("6. Download Analysis Report")
+            st.header("4. Download Candidate Report")
 
-            report_lines = [
-                "AI RESUME SCREENING & JOB MATCHING REPORT",
-                "=" * 45,
-                "",
-                f"Resume: {uploaded_resume.name}",
-                f"Skill Match: {skill_match_percentage}%",
-                f"Text Similarity: {similarity_percentage}%",
-                "",
-                "MATCHED SKILLS",
-                "-" * 20,
-                *(
-                    list(map(str, matched_skills))
-                    if matched_skills
-                    else ["No matching skills detected."]
-                ),
-                "",
-                "MISSING SKILLS",
-                "-" * 20,
-                *(
-                    list(map(str, missing_skills))
-                    if missing_skills
-                    else ["No missing skills detected."]
-                ),
-                "",
-                "RECOMMENDATIONS",
-                "-" * 20,
-                *(
-                    list(map(str, recommendations))
-                    if recommendations
-                    else ["No specific recommendations."]
-                ),
-                "",
-                "NOTE",
-                "Scores indicate similarity and detected skill overlap.",
-                "They do not guarantee job suitability.",
+            csv_buffer = io.StringIO()
+
+            fieldnames = [
+                "Rank",
+                "Resume",
+                "Skill Match (%)",
+                "Text Similarity (%)",
+                "Matched Skills",
+                "Missing Skills",
+                "Recommendations",
             ]
 
-            report_text = "\n".join(report_lines)
+            writer = csv.DictWriter(
+                csv_buffer,
+                fieldnames=fieldnames
+            )
+
+            writer.writeheader()
+
+            for rank, candidate in enumerate(
+                candidate_results,
+                start=1
+            ):
+                writer.writerow({
+                    "Rank": rank,
+                    "Resume": candidate["resume_name"],
+                    "Skill Match (%)": candidate["skill_match"],
+                    "Text Similarity (%)": candidate["text_similarity"],
+                    "Matched Skills": ", ".join(
+                        map(str, candidate["matched_skills"])
+                    ),
+                    "Missing Skills": ", ".join(
+                        map(str, candidate["missing_skills"])
+                    ),
+                    "Recommendations": "; ".join(
+                        map(str, candidate["recommendations"])
+                    ),
+                })
 
             st.download_button(
-                label="📥 Download Analysis Report (.txt)",
-                data=report_text,
-                file_name="resume_analysis_report.txt",
-                mime="text/plain",
+                label="📥 Download Candidate Comparison (CSV)",
+                data=csv_buffer.getvalue(),
+                file_name="candidate_screening_report.csv",
+                mime="text/csv",
                 use_container_width=True
             )
 
-        finally:
-            if (
-                temporary_resume
-                and os.path.exists(temporary_resume)
-            ):
-                try:
-                    os.remove(temporary_resume)
-                except OSError:
-                    pass
+        else:
+            st.error(
+                "None of the uploaded resumes could be analyzed. "
+                "Please upload valid, text-based PDF resumes."
+            )
+
+        # =============================================
+        # PROCESSING ERRORS
+        # =============================================
+
+        if failed_resumes:
+            st.warning(
+                f"{len(failed_resumes)} resume(s) could not be analyzed."
+            )
+
+            with st.expander("View processing errors"):
+                for failed in failed_resumes:
+                    st.write(f"**{failed['name']}**")
+                    st.caption(failed["error"])
 
 
 # =========================================================
