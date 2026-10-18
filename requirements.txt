@@ -1,4 +1,4 @@
-
+reportlab
 streamlit
 PyMuPDF
 scikit-learn
