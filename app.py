@@ -15,9 +15,56 @@ from utils.recommendations import generate_recommendations
 # =========================================================
 
 st.set_page_config(
-    page_title="AI Resume Screening & Job Matching",
+    page_title="AI Resume Screening | Smart Recruiter",
     page_icon="📄",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+
+# =========================================================
+# CUSTOM DASHBOARD STYLING
+# =========================================================
+
+st.markdown(
+    """
+    <style>
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 1200px;
+    }
+
+    .hero {
+        padding: 1.5rem;
+        border-radius: 16px;
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        margin-bottom: 1.5rem;
+    }
+
+    .hero h1 {
+        margin-bottom: 0.4rem;
+    }
+
+    div[data-testid="stMetric"] {
+        padding: 1rem;
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        border-radius: 12px;
+    }
+
+    div.stButton > button {
+        border-radius: 10px;
+        font-weight: 600;
+        min-height: 2.8rem;
+    }
+
+    div[data-testid="stDownloadButton"] button {
+        border-radius: 10px;
+        font-weight: 600;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
 
@@ -25,18 +72,23 @@ st.set_page_config(
 # HEADER
 # =========================================================
 
-st.title("📄 AI Resume Screening & Job Matching System")
-
 st.markdown(
     """
-    **NLP-based Resume Analysis System**
-
-    Upload a resume and provide a job description to identify
-    matching skills, missing skills, and textual similarity.
-    """
+    <div class="hero">
+        <h1>📄 AI Resume Screening</h1>
+        <p>
+            Smart resume analysis and job matching powered by
+            Natural Language Processing.
+        </p>
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
-st.divider()
+st.caption(
+    "Upload a resume, compare it with a job description, "
+    "and identify relevant skills and potential skill gaps."
+)
 
 
 # =========================================================
@@ -44,24 +96,45 @@ st.divider()
 # =========================================================
 
 with st.sidebar:
-    st.header("⚙️ Project Information")
+    st.title("⚙️ Project Information")
 
     st.write(
+        "An NLP-based application that compares resume content "
+        "with job requirements."
+    )
+
+    st.divider()
+
+    st.subheader("Technology Stack")
+
+    st.markdown(
         """
-        This system uses Natural Language Processing (NLP)
-        techniques to compare a resume with a job description.
+        - 🐍 Python
+        - 🧠 Natural Language Processing
+        - 📊 TF-IDF
+        - 📐 Cosine Similarity
+        - 🤖 Scikit-learn
+        - 🌐 Streamlit
+        - 📄 PyMuPDF
         """
     )
 
-    st.subheader("Technologies")
-    st.write("• Python")
-    st.write("• NLP")
-    st.write("• TF-IDF")
-    st.write("• Cosine Similarity")
-    st.write("• Scikit-learn")
-    st.write("• Streamlit")
+    st.divider()
+
+    st.subheader("How it works")
+
+    st.markdown(
+        """
+        1. Upload a PDF resume.
+        2. Enter a job description.
+        3. Analyze skills and text.
+        4. Review the results.
+        5. Download the report.
+        """
+    )
 
     st.divider()
+
     st.caption("AI Resume Screening Project")
 
 
@@ -69,41 +142,37 @@ with st.sidebar:
 # INPUT SECTION
 # =========================================================
 
-st.header("📥 Input")
+st.header("1. Enter Candidate Information")
 
-col1, col2 = st.columns(2)
+resume_col, job_col = st.columns(2, gap="large")
 
-with col1:
-    st.subheader("📄 Resume")
+with resume_col:
+    st.subheader("📄 Upload Resume")
 
     uploaded_resume = st.file_uploader(
-        "Upload Resume PDF",
+        "Choose a PDF file",
         type=["pdf"],
         help="Upload a text-based PDF resume."
     )
 
-    if uploaded_resume:
-        st.success(f"Uploaded: {uploaded_resume.name}")
+    if uploaded_resume is not None:
+        st.success(f"Selected: {uploaded_resume.name}")
 
-with col2:
+with job_col:
     st.subheader("💼 Job Description")
 
     job_description = st.text_area(
-        "Paste the job description below",
+        "Paste the job requirements",
         height=220,
         placeholder=(
             "Example:\n"
             "We are looking for a Data Analyst with "
-            "knowledge of Python, SQL, Excel and Power BI."
+            "Python, SQL, Excel, Power BI and data "
+            "visualization skills."
         )
     )
 
 st.divider()
-
-
-# =========================================================
-# ANALYZE BUTTON
-# =========================================================
 
 analyze_button = st.button(
     "🔍 Analyze Resume",
@@ -118,7 +187,6 @@ analyze_button = st.button(
 
 if analyze_button:
 
-    # Validate inputs.
     if uploaded_resume is None:
         st.error("Please upload a resume PDF.")
 
@@ -129,10 +197,8 @@ if analyze_button:
         temporary_resume = None
 
         try:
-            with st.spinner(
-                "Analyzing resume and job description..."
-            ):
-                # Create a unique temporary PDF file.
+            with st.spinner("Analyzing the resume..."):
+
                 with tempfile.NamedTemporaryFile(
                     suffix=".pdf",
                     delete=False
@@ -140,34 +206,28 @@ if analyze_button:
                     temp_file.write(uploaded_resume.getvalue())
                     temporary_resume = temp_file.name
 
-                # Extract resume text.
                 resume_text = extract_text_from_pdf(
                     temporary_resume
                 )
 
-                # Extract skills.
                 resume_skills = extract_skills(resume_text)
                 job_skills = extract_skills(job_description)
 
-                # Compare skills.
                 matched_skills, missing_skills = compare_skills(
                     resume_skills,
                     job_skills
                 )
 
-                # Calculate skill match percentage.
                 skill_match_percentage = calculate_match_percentage(
                     matched_skills,
                     job_skills
                 )
 
-                # Calculate text similarity percentage.
                 similarity_percentage = calculate_similarity(
                     resume_text,
                     job_description
                 )
 
-                # Generate recommendations.
                 recommendations = generate_recommendations(
                     missing_skills
                 )
@@ -177,80 +237,97 @@ if analyze_button:
 
         except Exception:
             st.error(
-                "Something went wrong while analyzing this resume. "
-                "Please check your PDF and try again."
+                "Unable to analyze this resume. "
+                "Please check the PDF and try again."
             )
 
         else:
             # =============================================
-            # ANALYSIS RESULTS
+            # RESULTS OVERVIEW
             # =============================================
 
-            st.success("Analysis completed successfully! ✅")
-            st.header("📊 Analysis Results")
+            st.success("Resume analysis completed successfully.")
 
-            # Score cards and progress bars.
-            score1, score2 = st.columns(2)
+            st.header("2. Candidate Analysis Overview")
 
-            with score1:
+            st.caption(f"Resume analyzed: {uploaded_resume.name}")
+
+            metric1, metric2, metric3 = st.columns(3)
+
+            with metric1:
                 st.metric(
-                    label="🎯 Skill Match",
-                    value=f"{skill_match_percentage}%"
+                    "🎯 Skill Match",
+                    f"{skill_match_percentage}%"
                 )
 
-                st.progress(
-                    max(
-                        0.0,
-                        min(1.0, skill_match_percentage / 100)
-                    )
-                )
-
-            with score2:
+            with metric2:
                 st.metric(
-                    label="📈 Text Similarity",
-                    value=f"{similarity_percentage}%"
+                    "📈 Text Similarity",
+                    f"{similarity_percentage}%"
                 )
 
-                st.progress(
-                    max(
-                        0.0,
-                        min(1.0, similarity_percentage / 100)
-                    )
+            with metric3:
+                st.metric(
+                    "✅ Skills Matched",
+                    len(matched_skills)
                 )
 
-            st.caption(
+            # Keep progress values within the supported range.
+            skill_progress = max(
+                0.0,
+                min(1.0, float(skill_match_percentage) / 100)
+            )
+
+            similarity_progress = max(
+                0.0,
+                min(1.0, float(similarity_percentage) / 100)
+            )
+
+            progress_col1, progress_col2 = st.columns(2)
+
+            with progress_col1:
+                st.write("Skill Match Progress")
+                st.progress(skill_progress)
+
+            with progress_col2:
+                st.write("Text Similarity Progress")
+                st.progress(similarity_progress)
+
+            st.info(
                 "Skill Match measures detected skill overlap. "
                 "Text Similarity measures textual similarity. "
-                "Neither score guarantees job suitability."
+                "These scores do not guarantee job suitability "
+                "and should not be used as the sole basis for hiring."
             )
 
             st.divider()
 
             # =============================================
-            # MATCHED AND MISSING SKILLS
+            # SKILL GAP ANALYSIS
             # =============================================
 
-            matched_col, missing_col = st.columns(2)
+            st.header("3. Skill Gap Analysis")
+
+            matched_col, missing_col = st.columns(2, gap="large")
 
             with matched_col:
                 st.subheader("✅ Matched Skills")
 
                 if matched_skills:
                     for skill in matched_skills:
-                        st.success(skill, icon="✅")
+                        st.success(str(skill))
                 else:
-                    st.info("No matching skills detected.")
+                    st.info("No matching skills were detected.")
 
             with missing_col:
-                st.subheader("❌ Missing Skills")
+                st.subheader("📌 Missing Skills")
 
                 if missing_skills:
                     for skill in missing_skills:
-                        st.error(skill, icon="❌")
+                        st.warning(str(skill))
                 else:
                     st.success(
-                        "No missing skills detected.",
-                        icon="✅"
+                        "All detected job skills are matched."
                     )
 
             st.divider()
@@ -259,14 +336,14 @@ if analyze_button:
             # RECOMMENDATIONS
             # =============================================
 
-            st.subheader("💡 Recommendations")
+            st.header("4. Improvement Recommendations")
 
             if recommendations:
                 for recommendation in recommendations:
-                    st.info(recommendation)
+                    st.info(str(recommendation))
             else:
                 st.success(
-                    "No specific recommendations at this time."
+                    "No specific recommendations were generated."
                 )
 
             st.divider()
@@ -275,34 +352,34 @@ if analyze_button:
             # DETECTED SKILLS
             # =============================================
 
-            skills_col1, skills_col2 = st.columns(2)
+            st.header("5. Detected Skills")
 
-            with skills_col1:
-                with st.expander("📄 View Resume Skills"):
+            resume_skills_col, job_skills_col = st.columns(2)
+
+            with resume_skills_col:
+                with st.expander("📄 Skills found in resume"):
                     if resume_skills:
-                        for skill in resume_skills:
-                            st.write(f"• {skill}")
+                        st.write(", ".join(map(str, resume_skills)))
                     else:
                         st.write("No skills detected.")
 
-            with skills_col2:
-                with st.expander("💼 View Job Required Skills"):
+            with job_skills_col:
+                with st.expander("💼 Skills found in job description"):
                     if job_skills:
-                        for skill in job_skills:
-                            st.write(f"• {skill}")
+                        st.write(", ".join(map(str, job_skills)))
                     else:
                         st.write("No skills detected.")
 
-            # =============================================
-            # EXTRACTED RESUME TEXT
-            # =============================================
-
-            with st.expander("📃 View Extracted Resume Text"):
+            with st.expander("📃 View extracted resume text"):
                 st.text(resume_text)
 
+            st.divider()
+
             # =============================================
-            # DOWNLOADABLE ANALYSIS REPORT
+            # DOWNLOAD REPORT
             # =============================================
+
+            st.header("6. Download Analysis Report")
 
             report_lines = [
                 "AI RESUME SCREENING & JOB MATCHING REPORT",
@@ -315,7 +392,7 @@ if analyze_button:
                 "MATCHED SKILLS",
                 "-" * 20,
                 *(
-                    [str(skill) for skill in matched_skills]
+                    list(map(str, matched_skills))
                     if matched_skills
                     else ["No matching skills detected."]
                 ),
@@ -323,7 +400,7 @@ if analyze_button:
                 "MISSING SKILLS",
                 "-" * 20,
                 *(
-                    [str(skill) for skill in missing_skills]
+                    list(map(str, missing_skills))
                     if missing_skills
                     else ["No missing skills detected."]
                 ),
@@ -331,16 +408,20 @@ if analyze_button:
                 "RECOMMENDATIONS",
                 "-" * 20,
                 *(
-                    [str(item) for item in recommendations]
+                    list(map(str, recommendations))
                     if recommendations
                     else ["No specific recommendations."]
                 ),
+                "",
+                "NOTE",
+                "Scores indicate similarity and detected skill overlap.",
+                "They do not guarantee job suitability.",
             ]
 
             report_text = "\n".join(report_lines)
 
             st.download_button(
-                label="📥 Download Analysis Report",
+                label="📥 Download Analysis Report (.txt)",
                 data=report_text,
                 file_name="resume_analysis_report.txt",
                 mime="text/plain",
@@ -348,7 +429,6 @@ if analyze_button:
             )
 
         finally:
-            # Clean up the temporary PDF.
             if (
                 temporary_resume
                 and os.path.exists(temporary_resume)
