@@ -626,14 +626,13 @@ if analyze_button:
 
                     # Extract candidate skills.
                     resume_skills = extract_skills(resume_text)
-
-                    # Compare required and candidate skills.
+                    
+                    # Compare the resume skills with the job requirements.
                     if job_skills:
                         matched_skills, missing_skills = compare_skills(
-                            job_skills,
                             resume_skills,
+                            job_skills,
                         )
-
                         skill_match = calculate_match_percentage(
                             matched_skills,
                             job_skills,
@@ -643,11 +642,11 @@ if analyze_button:
                         missing_skills = []
                         skill_match = 0.0
 
-                    # Calculate text similarity.
-                    text_similarity = calculate_similarity(
-                        job_description,
-                        resume_text,
-                    )
+                        # Calculate resume-to-job text similarity.
+                        text_similarity = calculate_similarity(
+                            resume_text,
+                            job_description,
+                        )
 
                     # Generate skill-gap recommendations.
                     recommendations = generate_recommendations(
