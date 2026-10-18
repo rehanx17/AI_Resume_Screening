@@ -1,3 +1,6 @@
+
+import os
+import tempfile
 import streamlit as st
 
 from utils.resume_parser import extract_text_from_pdf
@@ -41,7 +44,6 @@ st.divider()
 # =========================================================
 
 with st.sidebar:
-
     st.header("⚙️ Project Information")
 
     st.write(
@@ -52,7 +54,6 @@ with st.sidebar:
     )
 
     st.subheader("Technologies")
-
     st.write("• Python")
     st.write("• NLP")
     st.write("• TF-IDF")
@@ -61,7 +62,6 @@ with st.sidebar:
     st.write("• Streamlit")
 
     st.divider()
-
     st.caption("AI Resume Screening Project")
 
 
@@ -73,13 +73,7 @@ st.header("📥 Input")
 
 col1, col2 = st.columns(2)
 
-
-# =========================================================
-# RESUME UPLOAD
-# =========================================================
-
 with col1:
-
     st.subheader("📄 Resume")
 
     uploaded_resume = st.file_uploader(
@@ -88,18 +82,9 @@ with col1:
     )
 
     if uploaded_resume:
-
-        st.success(
-            f"Uploaded: {uploaded_resume.name}"
-        )
-
-
-# =========================================================
-# JOB DESCRIPTION
-# =========================================================
+        st.success(f"Uploaded: {uploaded_resume.name}")
 
 with col2:
-
     st.subheader("💼 Job Description")
 
     job_description = st.text_area(
@@ -111,7 +96,6 @@ with col2:
             "knowledge of Python, SQL, Excel and Power BI."
         )
     )
-
 
 st.divider()
 
@@ -133,305 +117,163 @@ analyze_button = st.button(
 
 if analyze_button:
 
-    # -----------------------------------------------------
-    # CHECK RESUME
-    # -----------------------------------------------------
-
     if uploaded_resume is None:
+        st.error("Please upload a resume PDF.")
 
-        st.error(
-            "Please upload a resume PDF."
-        )
-
-        st.stop()
-
-
-    # -----------------------------------------------------
-    # CHECK JOB DESCRIPTION
-    # -----------------------------------------------------
-
-    if not job_description.strip():
-
-        st.error(
-            "Please enter a job description."
-        )
-
-        st.stop()
-
-
-    # -----------------------------------------------------
-    # START ANALYSIS
-    # -----------------------------------------------------
-
-    with st.spinner(
-        "Analyzing resume and job description..."
-    ):
-
-        # -------------------------------------------------
-        # Save uploaded PDF temporarily
-        # -------------------------------------------------
-
-        temporary_resume = "temp_resume.pdf"
-
-        with open(
-            temporary_resume,
-            "wb"
-        ) as file:
-
-            file.write(
-                uploaded_resume.getvalue()
-            )
-
-
-        # -------------------------------------------------
-        # Extract Resume Text
-        # -------------------------------------------------
-
-        resume_text = extract_text_from_pdf(
-            temporary_resume
-        )
-
-
-        # -------------------------------------------------
-        # Extract Skills
-        # -------------------------------------------------
-
-        resume_skills = extract_skills(
-            resume_text
-        )
-
-        job_skills = extract_skills(
-            job_description
-        )
-
-
-        # -------------------------------------------------
-        # Compare Skills
-        # -------------------------------------------------
-
-        matched_skills, missing_skills = compare_skills(
-            resume_skills,
-            job_skills
-        )
-
-
-        # -------------------------------------------------
-        # Calculate Skill Match
-        # -------------------------------------------------
-
-        skill_match_percentage = calculate_match_percentage(
-            matched_skills,
-            job_skills
-        )
-
-
-        # -------------------------------------------------
-        # Calculate Text Similarity
-        # -------------------------------------------------
-
-        similarity_percentage = calculate_similarity(
-            resume_text,
-            job_description
-        )
-
-
-        # -------------------------------------------------
-        # Generate Recommendations
-        # -------------------------------------------------
-
-        recommendations = generate_recommendations(
-            missing_skills
-        )
-
-
-    # =====================================================
-    # RESULTS
-    # =====================================================
-
-    st.success(
-        "Analysis completed successfully! ✅"
-    )
-
-    st.header("📊 Analysis Results")
-
-
-    # =====================================================
-    # SCORE CARDS
-    # =====================================================
-
-    score1, score2 = st.columns(2)
-
-
-    with score1:
-
-        st.metric(
-            label="🎯 Skill Match",
-            value=f"{skill_match_percentage}%"
-        )
-
-
-    with score2:
-
-        st.metric(
-            label="📈 Text Similarity",
-            value=f"{similarity_percentage}%"
-        )
-
-
-    st.divider()
-
-
-    # =====================================================
-    # SKILL ANALYSIS
-    # =====================================================
-
-    matched_col, missing_col = st.columns(2)
-
-
-    # =====================================================
-    # MATCHED SKILLS
-    # =====================================================
-
-    with matched_col:
-
-        st.subheader("✅ Matched Skills")
-
-        if matched_skills:
-
-            for skill in matched_skills:
-
-                st.success(
-                    skill,
-                    icon="✅"
-                )
-
-        else:
-
-            st.info(
-                "No matching skills detected."
-            )
-
-
-    # =====================================================
-    # MISSING SKILLS
-    # =====================================================
-
-    with missing_col:
-
-        st.subheader("❌ Missing Skills")
-
-        if missing_skills:
-
-            for skill in missing_skills:
-
-                st.error(
-                    skill,
-                    icon="❌"
-                )
-
-        else:
-
-            st.success(
-                "No missing skills detected.",
-                icon="✅"
-            )
-
-
-    st.divider()
-
-
-    # =====================================================
-    # RECOMMENDATIONS
-    # =====================================================
-
-    st.subheader("💡 Recommendations")
-
-    if recommendations:
-
-        for recommendation in recommendations:
-
-            st.info(
-                recommendation
-            )
+    elif not job_description.strip():
+        st.error("Please enter a job description.")
 
     else:
+        temporary_resume = None
 
-        st.success(
-            "No specific recommendations at this time."
-        )
+        try:
+            with st.spinner(
+                "Analyzing resume and job description..."
+            ):
+                # Create a unique temporary PDF file.
+                with tempfile.NamedTemporaryFile(
+                    suffix=".pdf",
+                    delete=False
+                ) as temp_file:
+                    temp_file.write(uploaded_resume.getvalue())
+                    temporary_resume = temp_file.name
 
-
-    st.divider()
-
-
-    # =====================================================
-    # DETECTED SKILLS
-    # =====================================================
-
-    skills_col1, skills_col2 = st.columns(2)
-
-
-    # =====================================================
-    # RESUME SKILLS
-    # =====================================================
-
-    with skills_col1:
-
-        with st.expander(
-            "📄 View Resume Skills"
-        ):
-
-            if resume_skills:
-
-                for skill in resume_skills:
-
-                    st.write(
-                        f"• {skill}"
-                    )
-
-            else:
-
-                st.write(
-                    "No skills detected."
+                # Extract resume text.
+                resume_text = extract_text_from_pdf(
+                    temporary_resume
                 )
 
+                # Extract skills.
+                resume_skills = extract_skills(resume_text)
+                job_skills = extract_skills(job_description)
 
-    # =====================================================
-    # JOB SKILLS
-    # =====================================================
-
-    with skills_col2:
-
-        with st.expander(
-            "💼 View Job Required Skills"
-        ):
-
-            if job_skills:
-
-                for skill in job_skills:
-
-                    st.write(
-                        f"• {skill}"
-                    )
-
-            else:
-
-                st.write(
-                    "No job skills detected."
+                # Compare skills.
+                matched_skills, missing_skills = compare_skills(
+                    resume_skills,
+                    job_skills
                 )
 
+                # Calculate scores.
+                skill_match_percentage = calculate_match_percentage(
+                    matched_skills,
+                    job_skills
+                )
 
-    # =====================================================
-    # EXTRACTED RESUME TEXT
-    # =====================================================
+                similarity_percentage = calculate_similarity(
+                    resume_text,
+                    job_description
+                )
 
-    with st.expander(
-        "📃 View Extracted Resume Text"
-    ):
+                # Generate recommendations.
+                recommendations = generate_recommendations(
+                    missing_skills
+                )
 
-        st.text(
-            resume_text
-        )
+        except ValueError as error:
+            st.error(str(error))
+
+        except Exception:
+            st.error(
+                "Something went wrong while analyzing this resume. "
+                "Please check your PDF and try again."
+            )
+
+        else:
+            # =============================================
+            # RESULTS
+            # =============================================
+
+            st.success("Analysis completed successfully! ✅")
+            st.header("📊 Analysis Results")
+
+            score1, score2 = st.columns(2)
+
+            with score1:
+                st.metric(
+                    label="🎯 Skill Match",
+                    value=f"{skill_match_percentage}%"
+                )
+
+            with score2:
+                st.metric(
+                    label="📈 Text Similarity",
+                    value=f"{similarity_percentage}%"
+                )
+
+            st.divider()
+
+            # Matched and missing skills.
+            matched_col, missing_col = st.columns(2)
+
+            with matched_col:
+                st.subheader("✅ Matched Skills")
+
+                if matched_skills:
+                    for skill in matched_skills:
+                        st.success(skill, icon="✅")
+                else:
+                    st.info("No matching skills detected.")
+
+            with missing_col:
+                st.subheader("❌ Missing Skills")
+
+                if missing_skills:
+                    for skill in missing_skills:
+                        st.error(skill, icon="❌")
+                else:
+                    st.success(
+                        "No missing skills detected.",
+                        icon="✅"
+                    )
+
+            st.divider()
+
+            # Recommendations.
+            st.subheader("💡 Recommendations")
+
+            if recommendations:
+                for recommendation in recommendations:
+                    st.info(recommendation)
+            else:
+                st.success(
+                    "No specific recommendations at this time."
+                )
+
+            st.divider()
+
+            # Detected skills.
+            skills_col1, skills_col2 = st.columns(2)
+
+            with skills_col1:
+                with st.expander("📄 View Resume Skills"):
+                    if resume_skills:
+                        for skill in resume_skills:
+                            st.write(f"• {skill}")
+                    else:
+                        st.write("No skills detected.")
+
+            with skills_col2:
+                with st.expander("💼 View Job Required Skills"):
+                    if job_skills:
+                        for skill in job_skills:
+                            st.write(f"• {skill}")
+                    else:
+                        st.write("No job skills detected.")
+
+            # Extracted text.
+            with st.expander("📃 View Extracted Resume Text"):
+                st.text(resume_text)
+
+        finally:
+            # Remove the temporary PDF after processing.
+            if (
+                temporary_resume
+                and os.path.exists(temporary_resume)
+            ):
+                try:
+                    os.remove(temporary_resume)
+                except OSError:
+                    pass
 
 
 # =========================================================
